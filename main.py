@@ -1,70 +1,40 @@
-import sys
-from io import BytesIO
-import requests
-from PIL import Image
-from getting_coordinates import getting
+from getting_coordinates import  generate_city
+import random
+import pygame
+import os
+
+city = ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань',
+             'Нижний Новгород', 'Челябинск', 'Самара', 'Омск','Ростов-на-Дону',
+             'Уфа', 'Красноярск', 'Воронеж', 'Пермь', 'Волгоград', 'Краснодар',
+             'Саратов', 'Тюмень', 'Тольятти', 'Ижевск']
 
 
-toponym_to_find = ' '.join(sys.argv[1:])
+name_city = random.choice(city)
+response = generate_city(name_city)
+pygame.init()
+screen = pygame.display.set_mode((600, 450))
+running = True
 
+if response:
+    map_file = "map.png"
+    with open(map_file, "wb") as file:
+        file.write(response.content)
+    screen.blit(pygame.image.load(map_file), (0, 0))
+    pygame.display.flip()
+    os.remove(map_file)
 
-geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
-
-geocoder_params = {
-    "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
-    "geocode": toponym_to_find,
-    "format": "json"}
-
-response = requests.get(geocoder_api_server, params=geocoder_params)
-print(response.url)
-
-
-tompony = getting(response)
-
-
-search_api_server = "https://search-maps.yandex.ru/v1/"
-api_key = "dda3ddba-c9ea-4ead-9010-f43fbc15c6e3"
-
-address_ll = ','.join(tompony)
-
-search_params = {
-    "apikey": api_key,
-    "text": "аптека",
-    "lang": "ru_RU",
-    "ll": address_ll,
-    "type": "biz"
-}
-
-response = requests.get(search_api_server, params=search_params)
-
-json_response = response.json()
-
-organization = json_response["features"][0]
-
-org_name = organization["properties"]["CompanyMetaData"]["name"]
-org_address = organization["properties"]["CompanyMetaData"]["address"]
-
-point = organization["geometry"]["coordinates"]
-
-
-print('название', org_name)
-print('адрес', org_address)
-print(tompony, point)
-print('расстояние', ((float(tompony[0]) - point[0]) ** 2 + (float(tompony[1]) - point[1]) ** 2) ** 0.5 * 1000, 'м')
-
-org_point = "{0},{1}".format(point[0], point[1])
-delta = "0.009"
-
-map_params = {
-    "ll": address_ll,
-    "spn": ",".join([delta, delta]),
-    "l": "map",
-    "pt": f'{org_point},pm2dgl~{address_ll},pm2dgl',
-    "pl": f'{org_point},{address_ll}'
-}
-
-map_api_server = "http://static-maps.yandex.ru/1.x/"
-response = requests.get(map_api_server, params=map_params)
-
-Image.open(BytesIO(
-    response.content)).show()
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.MOUSEBUTTONUP:
+            name_city = random.choice(city)
+            response = generate_city(name_city)
+            if response:
+                map_file = "map.png"
+                with open(map_file, "wb") as file:
+                    file.write(response.content)
+                screen.blit(pygame.image.load(map_file), (0, 0))
+                pygame.display.flip()
+                os.remove(map_file)
+pygame.quit()
